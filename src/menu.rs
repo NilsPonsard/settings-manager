@@ -70,6 +70,12 @@ impl Menu {
         Ok(())
     }
 
+    pub fn get_width(&self) -> u16 {
+        let max_width = termion::terminal_size().unwrap_or((0, 0)).0;
+
+        min(self.desired_width, max_width)
+    }
+
     pub fn ask(&self) -> Result<usize, std::io::Error> {
         // todo : fall back if the terminal dosen’t support the required capabilities.
 
@@ -83,7 +89,6 @@ impl Menu {
         let max_width = size.0;
         let max_height = size.1;
 
-        let window_width = min(self.desired_width, max_width);
         let window_height = min(self.items.len() as u16 + 3, max_height);
 
         write!(
@@ -137,11 +142,26 @@ impl Menu {
     ) -> Result<(), std::io::Error> {
         let mut i = 0;
 
-        write!(stdout, "{}{}{}", self.menu_background_color, self.foreground_color, self.title)?;
+        let width = self.get_width();
 
+        let terminal_width = termion::terminal_size().unwrap_or((0, 0)).0;
+
+        let padding_right = (terminal_width - width) / 2;
+
+        self.print_background(stdout)?;
+        write!(
+            stdout,
+            "{}{}{}{}{}{}",
+            termion::cursor::Goto(padding_right, 1),
+            self.menu_background_color,
+            self.foreground_color,
+            termion::style::Bold,
+            self.title,
+            termion::style::Reset
+        )?;
 
         for _ in options.iter() {
-            self.print_menu_line(i + 2, stdout, y == i, &options, 2, 16)?;
+            self.print_menu_line(i + 3, stdout, y == i, &options, 3, padding_right)?;
             i += 1;
         }
 
@@ -179,7 +199,7 @@ impl Menu {
             " {}{}",
             options[(target_y - offset) as usize].to_string(),
             std::iter::repeat(" ")
-                .take(self.desired_width as usize - options[(target_y - offset) as usize].len())
+                .take(self.get_width() as usize - options[(target_y - offset) as usize].len() - 1)
                 .collect::<String>()
         );
 
@@ -193,6 +213,38 @@ impl Menu {
         )?;
 
         stdout.flush()?;
+
+        Ok(())
+    }
+
+    pub fn print_background(
+        &self,
+        stdout: &mut termion::raw::RawTerminal<std::io::Stdout>,
+    ) -> Result<(), std::io::Error> {
+        write!(
+            stdout,
+            "{}{}{}",
+            termion::clear::All,
+            termion::color::Fg(termion::color::Reset),
+            termion::color::Bg(termion::color::Reset),
+        )?;
+
+        for i in 1..self.items.len() + 3 {
+            let width = self.get_width();
+
+            let terminal_width = termion::terminal_size().unwrap_or((0, 0)).0;
+
+            let padding_right = (terminal_width - width) / 2;
+            write!(
+                stdout,
+                "{}{}{}",
+                termion::cursor::Goto(padding_right, i as u16),
+                self.menu_background_color,
+                std::iter::repeat(" ")
+                    .take(width as usize)
+                    .collect::<String>()
+            )?;
+        }
 
         Ok(())
     }
