@@ -1,4 +1,7 @@
-use std::{cmp::min, io::Write};
+use std::{
+    cmp::min,
+    io::{Stdout, Write},
+};
 
 use termion::{event::Key, input::TermRead, raw::IntoRawMode};
 
@@ -13,6 +16,8 @@ pub struct Menu {
     background_color: String,
     foreground_color: String,
     menu_background_color: String,
+    selected_background_color: String,
+    selected_foreground_color: String,
 }
 
 impl Menu {
@@ -23,6 +28,8 @@ impl Menu {
         background_color: String,
         menu_background_color: String,
         foreground_color: String,
+        selected_background_color: String,
+        selected_foreground_color: String,
     ) -> Self {
         Menu {
             title,
@@ -31,6 +38,8 @@ impl Menu {
             background_color,
             foreground_color,
             menu_background_color,
+            selected_background_color,
+            selected_foreground_color,
         }
     }
     pub fn default() -> Self {
@@ -41,7 +50,28 @@ impl Menu {
             background_color: "".to_string(),
             foreground_color: "".to_string(),
             menu_background_color: "".to_string(),
+            selected_background_color: "".to_string(),
+            selected_foreground_color: "".to_string(),
         }
+    }
+    fn print(
+        &self,
+        stdout: &mut termion::raw::RawTerminal<Stdout>,
+        selected: usize,
+    ) -> Result<(), std::io::Error> {
+        write!(
+            stdout,
+            "{}{}{}",
+            &self.foreground_color,
+            self.background_color,
+            termion::clear::All,
+        )
+        .unwrap();
+
+        self.print_menu(selected as u16, stdout, &self.items)?;
+        stdout.flush().unwrap();
+
+        Ok(())
     }
 
     pub fn ask(&self) -> Result<usize, std::io::Error> {
@@ -60,15 +90,18 @@ impl Menu {
         let window_width = min(self.desired_width, max_width);
         let window_height = min(self.items.len() as u16 + 3, max_height);
 
+        write!(
+            stdout,
+            "{}{}{}{}",
+            termion::clear::All,
+            termion::color::Fg(termion::color::Reset),
+            termion::color::Bg(termion::color::Reset),
+            termion::cursor::Hide
+        )?;
+
+        self.print(&mut stdout, selected)?;
+
         for c in stdin.keys() {
-            write!(
-                stdout,
-                "{}{}{}",
-                termion::clear::All,
-                termion::color::Fg(termion::color::Reset),
-                termion::color::Bg(termion::color::Reset)
-            )
-            .unwrap();
             match c.unwrap() {
                 Key::Char('\n') => return Ok(selected),
 
@@ -82,11 +115,9 @@ impl Menu {
                         selected += 1;
                     }
                 }
-                Key::Backspace => println!("×"),
                 _ => {}
             }
-            print_menu(selected as u16, &mut stdout, &self.items)?;
-            stdout.flush().unwrap();
+            self.print(&mut stdout, selected)?;
         }
 
         write!(
@@ -101,66 +132,69 @@ impl Menu {
         write!(stdout, "{}", termion::cursor::Show)?;
         Ok(0)
     }
-}
 
-fn print_menu(
-    y: u16,
-    stdout: &mut termion::raw::RawTerminal<std::io::Stdout>,
-    options: &Vec<String>,
-) -> Result<(), std::io::Error> {
-    let mut i = 0;
+    fn print_menu(
+        &self,
+        y: u16,
+        stdout: &mut termion::raw::RawTerminal<std::io::Stdout>,
+        options: &Vec<String>,
+    ) -> Result<(), std::io::Error> {
+        let mut i = 0;
 
-    for opt in options.iter() {
-        print_menu_line(i + 2, stdout, y == i, &options, 2, 16)?;
-        i += 1;
+        for _ in options.iter() {
+            self.print_menu_line(i + 2, stdout, y == i, &options, 2, 16)?;
+            i += 1;
+        }
+
+        stdout.flush()?;
+
+        Ok(())
     }
 
-    stdout.flush()?;
+    fn print_menu_line(
+        &self,
+        target_y: u16,
+        stdout: &mut termion::raw::RawTerminal<std::io::Stdout>,
+        selected: bool,
+        options: &Vec<String>,
+        offset: u16,
+        x: u16,
+    ) -> Result<(), std::io::Error> {
+        let check = u16::checked_sub(target_y, offset);
 
-    Ok(())
-}
+        if check.is_none() {
+            return Ok(());
+        }
 
-fn print_menu_line(
-    target_y: u16,
-    stdout: &mut termion::raw::RawTerminal<std::io::Stdout>,
-    selected: bool,
-    options: &Vec<String>,
-    offset: u16,
-    x: u16,
-) -> Result<(), std::io::Error> {
-    let check = u16::checked_sub(target_y, offset);
+        let reset = format!("{}{}", self.menu_background_color, self.foreground_color);
 
-    if check.is_none() {
-        return Ok(());
+        let color = match selected {
+            true => format!(
+                "{}{}",
+                self.selected_background_color, self.selected_foreground_color
+            ),
+            false => reset.to_string(),
+        };
+
+        let opt = format!(
+            " {}{}",
+            options[(target_y - offset) as usize].to_string(),
+            std::iter::repeat(" ")
+                .take(self.desired_width as usize - options[(target_y - offset) as usize].len())
+                .collect::<String>()
+        );
+
+        write!(
+            stdout,
+            "{}{}{}{}",
+            termion::cursor::Goto(x, target_y),
+            color,
+            opt,
+            reset
+        )?;
+
+        stdout.flush()?;
+
+        Ok(())
     }
-
-    let reset = format!(
-        "{}{}",
-        termion::color::Fg(termion::color::Reset),
-        termion::color::Bg(termion::color::Reset)
-    );
-
-    let color = match selected {
-        true => format!(
-            "{}{}",
-            termion::color::Fg(termion::color::White),
-            termion::color::Bg(termion::color::Blue)
-        ),
-        false => reset.to_string(),
-    };
-
-    let opt = options[(target_y - offset) as usize].to_string();
-
-    write!(
-        stdout,
-        "{}{}{}{}",
-        termion::cursor::Goto(x, target_y),
-        color,
-        opt,
-        reset
-    )?;
-
-    stdout.flush()?;
-
-    Ok(())
 }

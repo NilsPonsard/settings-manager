@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 extern crate termion;
+use std::fmt::format;
 use std::io::{stdin, Write};
 use termion::event::Key;
 use termion::input::TermRead;
@@ -21,8 +22,6 @@ struct Cli {
 }
 
 fn main() -> Result<(), std::io::Error> {
-    menu::test();
-
     let cli = Cli::parse();
 
     if cli.upload {
@@ -43,21 +42,19 @@ fn interface() -> Result<(), std::io::Error> {
 
     let height: u16 = termion::terminal_size()?.1;
 
-    write!(
-        stdout,
-        "{}{}q to exit. Type stuff, use alt, and so on.{}",
-        termion::clear::All,
-        termion::cursor::Goto(1, 1),
-        termion::cursor::Hide
-    )
-    .unwrap();
+    let menu = menu::Menu::new(
+        "Test".to_string(),
+        vec!["aa".to_string(), "bb".to_string(), "cc".to_string()],
+        60,
+        format!("{}", termion::color::Bg(termion::color::Blue)),
+        format!("{}", termion::color::Bg(termion::color::LightBlack)),
+        format!("{}", termion::color::Fg(termion::color::White)),
+        format!("{}", termion::color::Bg(termion::color::Black)),
+        format!("{}", termion::color::Fg(termion::color::White)),
+    );
 
+    let res = menu.ask()?;
 
-    let mut x = 1;
-    let mut y = 2;
-
-    
-    write!(stdout, "{}", termion::cursor::Show).unwrap();
+    print!("{}", res);
     Ok(())
 }
-
