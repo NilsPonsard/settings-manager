@@ -1,6 +1,6 @@
 # settings-manager
 
-A script to manage your configurations.
+A program to manage your configurations.
 
 ## supported configurations
 
