@@ -76,20 +76,21 @@ impl Menu {
         min(self.desired_width, max_width)
     }
 
+    pub fn get_height(&self) -> u16 {
+        let max_height = termion::terminal_size().unwrap_or((0, 0)).0;
+
+        let desired_height = self.items.len() as u16 + 2;
+
+        min(desired_height, max_height)
+    }
+
     pub fn ask(&self) -> Result<usize, std::io::Error> {
         // todo : fall back if the terminal dosen’t support the required capabilities.
 
         let stdin = std::io::stdin();
         let mut stdout = std::io::stdout().into_raw_mode()?;
 
-        let size = termion::terminal_size()?;
-
         let mut selected = 0;
-
-        let max_width = size.0;
-        let max_height = size.1;
-
-        let window_height = min(self.items.len() as u16 + 3, max_height);
 
         write!(
             stdout,
