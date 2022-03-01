@@ -38,6 +38,20 @@ impl Menu {
             selected_foreground_color,
         }
     }
+
+    pub fn new_default_style(title: String, items: Vec<String>) -> Self {
+        Menu::new(
+            title,
+            items,
+            60,
+            format!("{}", termion::color::Bg(termion::color::Blue)),
+            format!("{}", termion::color::Bg(termion::color::LightBlack)),
+            format!("{}", termion::color::Fg(termion::color::White)),
+            format!("{}", termion::color::Bg(termion::color::Black)),
+            format!("{}", termion::color::Fg(termion::color::White)),
+        )
+    }
+
     pub fn default() -> Self {
         Menu {
             title: "".to_string(),
