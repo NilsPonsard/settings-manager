@@ -61,11 +61,10 @@ impl Menu {
             &self.foreground_color,
             self.background_color,
             termion::clear::All,
-        )
-        .unwrap();
+        )?;
 
         self.print_menu(selected as u16, stdout, &self.items)?;
-        stdout.flush().unwrap();
+        stdout.flush()?;
 
         Ok(())
     }
@@ -124,14 +123,18 @@ impl Menu {
 
         write!(
             stdout,
-            "{}{}{}",
+            "{}{}{}{}{}",
+            termion::cursor::Goto(1, 1),
+            termion::color::Fg(termion::color::Reset),
+            termion::color::Bg(termion::color::Reset),
             termion::clear::All,
-            termion::cursor::Hide,
-            self.background_color
+            termion::cursor::Show,
         )?;
 
         // reset cursor config
-        write!(stdout, "{}", termion::cursor::Show)?;
+        // flush
+        // stdout.flush()?;
+
         Ok(0)
     }
 
@@ -166,7 +169,7 @@ impl Menu {
             i += 1;
         }
 
-        stdout.flush()?;
+        // stdout.flush()?;
 
         Ok(())
     }
@@ -183,6 +186,8 @@ impl Menu {
         let check = u16::checked_sub(target_y, offset);
 
         if check.is_none() {
+            // TODO : fall back if the terminal dosen’t support the required capabilities.
+
             return Ok(());
         }
 

@@ -44,6 +44,7 @@ fn interface() -> Result<(), std::io::Error> {
     );
 
     let res = menu.ask()?;
+    println!("");
 
     print!("{}", res);
     Ok(())
