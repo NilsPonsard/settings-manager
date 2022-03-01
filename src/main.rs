@@ -1,10 +1,5 @@
-use clap::{Parser, Subcommand};
+use clap::Parser;
 extern crate termion;
-use std::fmt::format;
-use std::io::{stdin, Write};
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
 
 mod menu;
 
@@ -37,11 +32,6 @@ fn main() -> Result<(), std::io::Error> {
 }
 
 fn interface() -> Result<(), std::io::Error> {
-    let stdin = stdin();
-    let mut stdout = std::io::stdout().into_raw_mode()?;
-
-    let height: u16 = termion::terminal_size()?.1;
-
     let menu = menu::Menu::new(
         "Test".to_string(),
         vec!["aa".to_string(), "bb".to_string(), "cc".to_string()],

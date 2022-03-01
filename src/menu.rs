@@ -5,10 +5,6 @@ use std::{
 
 use termion::{event::Key, input::TermRead, raw::IntoRawMode};
 
-pub fn test() {
-    println!("aaaa");
-}
-
 pub struct Menu {
     title: String,
     items: Vec<String>,
@@ -140,6 +136,9 @@ impl Menu {
         options: &Vec<String>,
     ) -> Result<(), std::io::Error> {
         let mut i = 0;
+
+        write!(stdout, "{}{}{}", self.menu_background_color, self.foreground_color, self.title)?;
+
 
         for _ in options.iter() {
             self.print_menu_line(i + 2, stdout, y == i, &options, 2, 16)?;
