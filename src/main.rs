@@ -1,5 +1,7 @@
 use clap::Parser;
 extern crate termion;
+use std::io;
+use tui::{backend::CrosstermBackend, Terminal};
 
 mod menu;
 
@@ -44,6 +46,14 @@ fn interface() -> Result<(), std::io::Error> {
     );
 
     let res = menu.ask()?;
+
+    let menu2 = menu::Menu::new_default_style(
+        "salut".to_string(),
+        vec!["aa".to_string(), "bb".to_string(), "cc".to_string()],
+    );
+
+    menu2.ask()?;
+
     println!("");
 
     print!("{}", res);
