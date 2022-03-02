@@ -1,7 +1,17 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 extern crate termion;
-use std::io;
-use tui::{backend::CrosstermBackend, Terminal};
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use std::{io, thread, time::Duration};
+use tui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout},
+    widgets::{Block, Borders, Widget},
+    Terminal,
+};
 
 mod menu;
 
@@ -9,53 +19,68 @@ mod menu;
 #[clap(author, version, about, long_about = None)]
 #[clap(propagate_version = true)]
 struct Cli {
-    /// Update the remote settings
-    #[clap(long)]
-    upload: bool,
+    #[clap(subcommand)]
+    command: Commands,
+}
 
+#[derive(Subcommand)]
+enum Commands {
+    /// Update the remote settings
+    Upload {
+        #[clap(long)]
+        to: Option<String>,
+    },
     /// Update the local settings
-    #[clap(long)]
-    download: bool,
+    Download {
+        #[clap(long)]
+        from: Option<String>,
+    },
 }
 
 fn main() -> Result<(), std::io::Error> {
     let cli = Cli::parse();
 
-    if cli.upload {
-        println!("Uploading");
-        return Ok(());
-    }
-    if cli.download {
-        println!("Downloading");
-        return Ok(());
+    match cli.command {
+        Commands::Upload { to } => {
+            println!("Uploading to {}", to.unwrap_or("undefined".to_string()));
+        }
+        Commands::Download { from } => {
+            println!(
+                "Downloading from {}",
+                from.unwrap_or("undefined".to_string())
+            );
+        }
     }
 
-    interface()
+    Ok(())
+    // interface()
 }
 
 fn interface() -> Result<(), std::io::Error> {
-    let menu = menu::Menu::new(
-        "Test".to_string(),
-        vec!["aa".to_string(), "bb".to_string(), "cc".to_string()],
-        60,
-        format!("{}", termion::color::Bg(termion::color::Blue)),
-        format!("{}", termion::color::Bg(termion::color::LightBlack)),
-        format!("{}", termion::color::Fg(termion::color::White)),
-        format!("{}", termion::color::Bg(termion::color::Black)),
-        format!("{}", termion::color::Fg(termion::color::White)),
-    );
+    enable_raw_mode()?;
 
-    let res = menu.ask()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
 
-    let menu2 = menu::Menu::new_default_style(
-        "salut".to_string(),
-        vec!["aa".to_string(), "bb".to_string(), "cc".to_string()],
-    );
+    terminal.draw(|f| {
+        let size = f.size();
+        let block = Block::default()
+            .title("Settings manager")
+            .borders(Borders::ALL);
+        f.render_widget(block, size);
+    })?;
 
-    menu2.ask()?;
+    thread::sleep(Duration::from_millis(5000));
 
-    println!("");
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
 
-    print!("{}", res);
     Ok(())
 }
